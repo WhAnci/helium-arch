@@ -6,6 +6,7 @@ Arch Linux용 **Helium Browser** 패키지입니다. upstream이 서명해서 �
 
 | 항목 | 값 |
 | --- | --- |
+| 저장소 | [WhAnci/helium-arch](https://github.com/WhAnci/helium-arch) |
 | upstream | [imputnet/helium-linux](https://github.com/imputnet/helium-linux) |
 | browser source | [imputnet/helium](https://github.com/imputnet/helium) |
 | 패키지 버전 | `helium-bin 0.20.2.1-1` |
@@ -33,7 +34,7 @@ Arch Linux용 **Helium Browser** 패키지입니다. upstream이 서명해서 �
 - AUR에는 현재 `helium-browser-bin`이 있지만, 이 저장소는 upstream 명명
   규칙(`-bin` 접미사, 실행 파일 `helium`)을 따르는 독립 패키지입니다.
   두 패키지는 같은 브라우저를 중복 설치하므로 `conflicts`로 막아 두었습니다.
-  이 저장소는 AUR에 게시되지 않았습니다.
+  이 저장소는 아직 AUR에 등록되지 않았습니다(절차는 [AUR 게시](#aur-게시) 참조).
 
 설치 파일은 Arch 패키징 규칙에 맞게 `/opt` 대신 `/usr/lib/helium`에
 배치했습니다. upstream wrapper는 자신의 위치를 기준으로 리소스를 찾기 때문에
@@ -387,6 +388,26 @@ LICENSE                                    이 저장소 패키징 파일의 0BS
 (`out/`, `work/`, `state/`, `logs/`)는 `.gitignore`로 제외되어 있습니다.
 `helium-bin-0.20.1.1-1-x86_64.pkg.tar.zst`는 이 환경에서 실제로
 빌드/설치한 결과물이며 자동화가 삭제/덮어쓰지 않습니다.
+
+## AUR 게시
+
+AUR 이름은 `helium-bin`으로 잡아 두었습니다(2026-10-30 확인 시 미사용).
+AUR 저장소에는 `PKGBUILD`와 `.SRCINFO`만 올라가며, 빌드 산출물은 올리지
+않습니다. GitHub 저장소가 원본이고 AUR은 그 파일을 그대로 미러링합니다.
+
+```bash
+# AUR 계정과 SSH 공개키 등록이 끝난 뒤
+git clone ssh://aur@aur.archlinux.org/helium-bin.git
+cp PKGBUILD .SRCINFO helium-bin/
+cd helium-bin
+git add PKGBUILD .SRCINFO
+git commit -m "helium-bin 0.20.2.1-1"
+git push
+```
+
+초기 등록은 AUR 웹에서 계정을 만든 뒤
+<https://aur.archlinux.org/account/>에 SSH 공개키를 등록해야 합니다.
+AUR SSH는 22번 포트를 사용합니다.
 
 ## Upstream 버전 갱신 절차 (수동)
 
