@@ -6,6 +6,12 @@ Arch Linux용 **Helium Browser** 패키지입니다. upstream이 서명해서 �
 공식 Linux 바이너리 tarball을 `PKGBUILD`로 패키징하며, Chromium sandbox를
 그대로 유지합니다.
 
+> **개인용 프로젝트이며 있는 그대로 제공됩니다.** 이 패키지는 개인 사용을 위해
+> 유지되며 AI의 도움을 받아 개발했습니다. 공식 Helium 프로젝트가 아닙니다.
+> 업데이트가 느릴 수 있고 오류나 동작하지 않는 부분이 있을 수 있습니다.
+> 기여(이슈, 풀 리퀘스트)는 받지 않습니다. 사용에 따른 책임은 사용자에게
+> 있습니다.
+
 | 항목 | 값 |
 | --- | --- |
 | 저장소 | [WhAnci/helium-arch](https://github.com/WhAnci/helium-arch) |
