@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Test double for makepkg: generates a minimal but structurally valid package
+# archive and .SRCINFO. FAKE_BUILD_FAIL=1 simulates a build failure.
+set -euo pipefail
+
+cd "${BUILD_WORKDIR:-$PWD}"
+
+if [[ "${1:-}" == "--printsrcinfo" ]]; then
+  pkgver="$(sed -n 's/^pkgver=//p' PKGBUILD | head -n1)"
+  pkgrel="$(sed -n 's/^pkgrel=//p' PKGBUILD | head -n1)"
+  pkgdesc="$(sed -n "s/^pkgdesc=['\"]\\(.*\\)['\"]$/\\1/p" PKGBUILD | head -n1)"
+  printf 'pkgbase = helium-bin\n'
+  printf '\tpkgdesc = %s\n' "$pkgdesc"
+  printf '\tpkgver = %s\n' "$pkgver"
+  printf '\tpkgrel = %s\n' "$pkgrel"
+  printf '\tarch = x86_64\n'
+  printf '\tsource = helium-%s-x86_64_linux.tar.xz\n' "$pkgver"
+  exit 0
+fi
+
+if [[ "${FAKE_BUILD_FAIL:-0}" == "1" ]]; then
+  echo 'fake makepkg: simulated build failure' >&2
+  exit 1
+fi
+
+pkgver="$(sed -n 's/^pkgver=//p' PKGBUILD | head -n1)"
+pkgrel="$(sed -n 's/^pkgrel=//p' PKGBUILD | head -n1)"
+if [[ -z "$pkgver" || -z "$pkgrel" ]]; then
+  echo 'fake makepkg: cannot read pkgver/pkgrel' >&2
+  exit 1
+fi
+
+out="${PKGDEST:-$PWD}"
+mkdir -p "$out"
+artifact="${out}/helium-bin-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst"
+
+stage="$(mktemp -d)"
+trap 'rm -rf "$stage"' EXIT
+mkdir -p "$stage/usr/lib/helium" "$stage/usr/bin"
+
+printf 'pkgname = helium-bin\npkgver = %s-%s\npkgdesc = fake helium package\narch = x86_64\n' \
+  "$pkgver" "$pkgrel" >"$stage/.PKGINFO"
+printf '#!/bin/sh\nexit 0\n' >"$stage/usr/lib/helium/helium"
+printf '#!/bin/sh\nexit 0\n' >"$stage/usr/lib/helium/helium-wrapper"
+chmod 755 "$stage/usr/lib/helium/helium" "$stage/usr/lib/helium/helium-wrapper"
+ln -s ../lib/helium/helium-wrapper "$stage/usr/bin/helium"
+
+bsdtar --zstd -cf "$artifact" -C "$stage" .PKGINFO usr
+echo "fake makepkg: created ${artifact}"

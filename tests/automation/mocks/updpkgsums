@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Test double for updpkgsums.
+
+Expands the small variable subset used by the fake PKGBUILD, hashes the files
+that update.sh placed in SRCDEST, and rewrites the sha256sums array.
+"""
+import hashlib
+import os
+import re
+import sys
+
+try:
+    with open("PKGBUILD", encoding="utf-8") as handle:
+        text = handle.read()
+except OSError as error:
+    print(f"fake updpkgsums: {error}", file=sys.stderr)
+    raise SystemExit(1)
+
+variables = {}
+for match in re.finditer(r"^([A-Za-z_][A-Za-z0-9_]*)=(.*)$", text, re.MULTILINE):
+    name, raw = match.group(1), match.group(2).strip()
+    if raw.startswith(("'", '"')) and raw.endswith(raw[0]):
+        raw = raw[1:-1]
+    variables[name] = raw
+
+
+def expand(value):
+    def replace(match):
+        key = match.group(1) or match.group(2)
+        return variables.get(key, "")
+
+    return re.sub(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)", replace, value)
+
+
+source_match = re.search(r"^source=\((.*?)^\)", text, re.MULTILINE | re.DOTALL)
+if not source_match:
+    print("fake updpkgsums: no source=() array", file=sys.stderr)
+    raise SystemExit(1)
+
+entries = []
+for first, second in re.findall(r"'([^']*)'|\"([^\"]*)\"", source_match.group(1)):
+    token = first or second
+    if token:
+        entries.append(expand(token))
+
+cache = os.environ.get("SRCDEST", "")
+hashes = []
+for entry in entries:
+    if "::" in entry:
+        filename, _ = entry.split("::", 1)
+    else:
+        filename = os.path.basename(entry)
+    candidates = [os.path.join(cache, filename)] if cache else []
+    candidates.append(os.path.join(os.getcwd(), filename))
+    path = next((candidate for candidate in candidates if os.path.isfile(candidate)), None)
+    if path is None:
+        print(f"fake updpkgsums: source not found: {filename}", file=sys.stderr)
+        raise SystemExit(1)
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    hashes.append(digest.hexdigest())
+
+if not hashes:
+    print("fake updpkgsums: empty source array", file=sys.stderr)
+    raise SystemExit(1)
+
+lines = ["sha256sums=('" + hashes[0] + "'"]
+for digest in hashes[1:]:
+    lines.append("            '" + digest + "'")
+lines.append(")")
+replacement = "\n".join(lines)
+
+if re.search(r"^sha256sums=\(", text, re.MULTILINE):
+    text = re.sub(r"^sha256sums=\(.*?^\)", replacement, text, count=1, flags=re.MULTILINE | re.DOTALL)
+else:
+    text = text.rstrip("\n") + "\n\n" + replacement + "\n"
+
+with open("PKGBUILD", "w", encoding="utf-8") as handle:
+    handle.write(text)

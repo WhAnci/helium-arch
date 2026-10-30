@@ -1,0 +1,17 @@
+# Template timer for a future Arch Linux build host. It is intentionally not
+# enabled by this repository. See packaging/systemd/helium-arch-build.service
+# and docs/AUTOMATION.md before installing it.
+[Unit]
+Description=Periodic check for a new Helium release
+
+[Timer]
+# The upstream release cadence is irregular; a daily check is cheap because a
+# run with no update exits after the read-only GitHub API request.
+OnCalendar=*-*-* 04:00:00
+RandomizedDelaySec=45m
+AccuracySec=1m
+Persistent=true
+Unit=helium-arch-build.service
+
+[Install]
+WantedBy=timers.target

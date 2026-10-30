@@ -1,0 +1,17 @@
+/pkg/
+/src/
+/helium-bin/
+/helium-bin-*.pkg.tar.zst
+/helium-bin-*.pkg.tar.zst.sig
+/*.part
+/.gnupg/
+/helium-*.tar.xz
+/helium-*.tar.xz.asc
+/helium-LICENSE
+/helium-LICENSE.ungoogled_chromium
+/net.imput.helium.metainfo.xml
+/.update.*
+/out/
+/state/
+/work/
+/logs/

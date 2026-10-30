@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Test double for unshare: the sandbox capability probe only needs "unshare
+# -Ur true" to succeed.
+set -euo pipefail
+exit 0

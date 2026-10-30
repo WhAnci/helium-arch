@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Test double for shellcheck. FAKE_SHELLCHECK_FAIL=1 simulates warnings.
+set -euo pipefail
+if [[ "${FAKE_SHELLCHECK_FAIL:-0}" == "1" ]]; then
+  echo 'In fake-script line 1: fake warning [SC0000]' >&2
+  exit 1
+fi
+exit 0

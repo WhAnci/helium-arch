@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Test double for curl. Emulates the two call shapes used by the automation:
+# GitHub API JSON (with -o/-D/-w) and plain file downloads.
+set -euo pipefail
+
+out=""
+write=""
+headers=""
+url=""
+
+while (( $# > 0 )); do
+  case "$1" in
+    -o)
+      out="$2"
+      shift 2
+      ;;
+    -w)
+      write="$2"
+      shift 2
+      ;;
+    -D)
+      headers="$2"
+      shift 2
+      ;;
+    --max-time|--retry|--retry-delay|--connect-timeout|-H|-K)
+      shift 2
+      ;;
+    --)
+      shift
+      ;;
+    -*)
+      shift
+      ;;
+    *)
+      url="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ "${FAKE_CURL_FAIL:-0}" == "1" ]]; then
+  echo 'curl: (7) Failed to connect to api.github.com' >&2
+  exit 7
+fi
+
+if [[ -n "$headers" ]]; then
+  printf 'x-ratelimit-remaining: 4999\r\n' >"$headers"
+fi
+
+code="${FAKE_HTTP_CODE:-200}"
+
+if [[ "$url" == *"/releases/latest"* ]]; then
+  tag="${FAKE_TAG:-v0.2.0}"
+  body="${FAKE_API_BODY:-{\"tag_name\":\"${tag}\",\"name\":\"fake release\"}}"
+  if [[ -n "$out" ]]; then
+    printf '%s\n' "$body" >"$out"
+  fi
+  if [[ -n "$write" ]]; then
+    printf '%s' "$code"
+  fi
+  exit 0
+fi
+
+if [[ -z "$out" ]]; then
+  echo "fake curl: no -o destination for ${url}" >&2
+  exit 2
+fi
+
+printf 'fake-download\nurl=%s\n' "$url" >"$out"
+if [[ -n "$write" ]]; then
+  printf '%s' "$code"
+fi

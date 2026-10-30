@@ -1,0 +1,58 @@
+# Template for a future Arch Linux build host. Do not enable this unit on a
+# desktop: it expects a dedicated "helium" user and the paths below to exist.
+#
+# Install (on the build host, as root, only when deployment is intended):
+#   install -d -o helium -g helium /srv/helium-arch /var/lib/helium-arch \
+#     /var/cache/helium-arch /var/log/helium-arch
+#   install -m644 helium-arch-build.service /etc/systemd/system/
+#   install -m644 helium-arch-build.timer /etc/systemd/system/
+#   systemctl daemon-reload
+#
+# No OnFailure= is set because this repository does not ship a notification
+# unit. Failure is recorded in state/status.json and the systemd journal.
+[Unit]
+Description=Build and publish the Helium Arch package
+Documentation=file:///srv/helium-arch/docs/AUTOMATION.md
+Wants=network-online.target
+After=network-online.target
+# Never start this by accident from a package installation.
+ConditionPathExists=/srv/helium-arch/scripts/automation/run.sh
+
+[Service]
+Type=oneshot
+User=helium
+Group=helium
+WorkingDirectory=/srv/helium-arch
+Environment=HELIUM_REPO=/srv/helium-arch
+Environment=HELIUM_WORK_ROOT=/var/lib/helium-arch/work
+Environment=HELIUM_SRCDEST=/var/cache/helium-arch/srcdest
+Environment=HELIUM_OUT=/srv/helium-arch/out
+Environment=HELIUM_STATE=/var/lib/helium-arch/state
+Environment=HELIUM_LOG_DIR=/var/log/helium-arch
+Environment=HOME=/var/lib/helium-arch
+Environment=XDG_CACHE_HOME=/var/cache/helium-arch
+Environment=HELIUM_SANDBOX=auto
+ExecStart=/srv/helium-arch/scripts/automation/run.sh
+
+# Resource limits: this package repacks a ~120 MB tarball, so it is I/O heavy
+# but not CPU heavy. Adjust CPUQuota/MemoryMax after measuring the build host.
+Nice=10
+IOSchedulingClass=idle
+CPUQuota=150%
+MemoryMax=3G
+TimeoutStartSec=1h
+
+# Hardening. The service needs write access only to its own state, cache,
+# workspace, log directory, and the published output directory.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/helium-arch/out /var/lib/helium-arch /var/cache/helium-arch /var/log/helium-arch
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictRealtime=yes
+UMask=0022
