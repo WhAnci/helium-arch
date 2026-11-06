@@ -2,8 +2,9 @@ name: Rebuild helium-bin
 
 on:
   schedule:
-    # Every 6 hours (UTC). Adjust if you want a different cadence.
-    - cron: "17 */6 * * *"
+    # Fallback runs while the host is expected to be on (KST 09:17, 15:17, 21:17).
+    # The upstream watcher triggers the build within ~15 minutes during the day.
+    - cron: "17 0,6,12 * * *"
   workflow_dispatch:
     inputs:
       force:
