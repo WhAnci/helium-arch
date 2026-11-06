@@ -1,10 +1,6 @@
 name: Rebuild helium-bin
 
 on:
-  schedule:
-    # Fallback runs while the host is expected to be on (KST 09:17, 15:17, 21:17).
-    # The upstream watcher triggers the build within ~15 minutes during the day.
-    - cron: "17 0,6,12 * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -27,42 +23,41 @@ permissions:
 
 jobs:
   build:
-    runs-on: [self-hosted, arch]
-    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    timeout-minutes: 30
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Prepare persistent cache
+      - name: Install build dependencies
         run: |
           set -euo pipefail
-          cache="$HOME/helium-cache"
-          runtime="$HOME/helium-runtime"
-          mkdir -p "$cache/out" "$cache/state" "$cache/logs" "$cache/srcdest" "$runtime"
-          chmod 700 "$runtime"
-          rm -rf out state logs
-          ln -s "$cache/out" out
-          ln -s "$cache/state" state
-          ln -s "$cache/logs" logs
-          {
-            echo "HELIUM_SRCDEST=$cache/srcdest"
-            echo "HELIUM_WORK_ROOT=/tmp/helium-work"
-            echo "XDG_RUNTIME_DIR=$runtime"
-          } >> "$GITHUB_ENV"
+          # Avoid pacman's Landlock sandbox in containers.
+          grep -q '^DisableSandbox' /etc/pacman.conf || sed -i '/^\[options\]/a DisableSandbox' /etc/pacman.conf
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed \
+            base-devel git curl gnupg python libarchive util-linux \
+            pacman-contrib zstd jq github-cli shellcheck namcap bubblewrap
+
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Environment
         run: |
           uname -a
           makepkg --version | head -1
           git --version
+          gh --version | head -1
 
       - name: Check upstream and build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HELIUM_FORCE: ${{ inputs.force && '1' || '0' }}
           HELIUM_VERSION: ${{ github.event.client_payload.version || inputs.version }}
-        run: ./scripts/automation/run.sh
+        run: |
+          set -euo pipefail
+          id builder >/dev/null 2>&1 || useradd -m builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          su -m builder -c "cd '$GITHUB_WORKSPACE' && HOME=/home/builder ./scripts/automation/run.sh"
 
       - name: Resolve artifact
         id: artifact
