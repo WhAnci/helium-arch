@@ -36,7 +36,11 @@ jobs:
           pacman -Syu --noconfirm
           pacman -S --noconfirm --needed \
             base-devel git curl gnupg python libarchive util-linux \
-            pacman-contrib zstd jq github-cli shellcheck namcap bubblewrap
+            pacman-contrib zstd jq github-cli shellcheck namcap bubblewrap \
+            alsa-lib at-spi2-core ca-certificates cairo dbus expat gcc-libs glib2 glibc \
+            gtk3 hicolor-icon-theme libcups libpulse libva libx11 libxcb libxcomposite \
+            libxdamage libxext libxfixes libxkbcommon libxrandr libxss mesa nspr nss pango \
+            systemd-libs ttf-liberation xdg-utils desktop-file-utils
 
       - name: Checkout
         uses: actions/checkout@v4
