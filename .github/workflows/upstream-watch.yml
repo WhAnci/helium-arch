@@ -1,0 +1,63 @@
+name: Watch upstream Helium releases
+
+on:
+  schedule:
+    # GitHub's minimum is 5 minutes; 15 minutes is a good balance.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compare upstream and latest local release
+        id: compare
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          upstream="$(curl -fsSL https://api.github.com/repos/imputnet/helium-linux/releases/latest | jq -r .tag_name)"
+          local_tag="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')"
+          local_version="${local_tag#v}"
+          local_version="${local_version%-*}"
+          echo "upstream=$upstream"
+          echo "local_release=$local_tag"
+          echo "local_version=$local_version"
+          echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
+          if [ -z "$local_version" ] || [ "$upstream" != "$local_version" ]; then
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for an already queued or running build
+        id: busy
+        if: steps.compare.outputs.new == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          active="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow rebuild.yml --limit 30 --json status --jq '[.[] | select(.status=="queued" or .status=="in_progress")] | length')"
+          echo "active=$active"
+          if [ "$active" -gt 0 ]; then
+            echo "busy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "busy=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dispatch build for the new upstream release
+        if: steps.compare.outputs.new == 'true' && steps.busy.outputs.busy != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          jq -n --arg v "${{ steps.compare.outputs.upstream }}" \
+            '{event_type:"upstream-release", client_payload:{version:$v}}' \
+            | gh api --method POST \
+                -H "Accept: application/vnd.github+json" \
+                "/repos/${GITHUB_REPOSITORY}/dispatches" --input -
+          echo "dispatched build for ${{ steps.compare.outputs.upstream }}"

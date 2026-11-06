@@ -14,6 +14,8 @@ on:
         description: "Build a specific upstream version (optional)"
         type: string
         required: false
+  repository_dispatch:
+    types: [upstream-release]
 
 concurrency:
   group: helium-rebuild
@@ -58,7 +60,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HELIUM_FORCE: ${{ inputs.force && '1' || '0' }}
-          HELIUM_VERSION: ${{ inputs.version }}
+          HELIUM_VERSION: ${{ github.event.client_payload.version || inputs.version }}
         run: ./scripts/automation/run.sh
 
       - name: Resolve artifact
