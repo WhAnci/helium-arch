@@ -35,12 +35,18 @@ jobs:
         run: |
           set -euo pipefail
           cache="$HOME/helium-cache"
-          mkdir -p "$cache/out" "$cache/state" "$cache/logs" "$cache/srcdest"
+          runtime="$HOME/helium-runtime"
+          mkdir -p "$cache/out" "$cache/state" "$cache/logs" "$cache/srcdest" "$runtime"
+          chmod 700 "$runtime"
           rm -rf out state logs
           ln -s "$cache/out" out
           ln -s "$cache/state" state
           ln -s "$cache/logs" logs
-          echo "HELIUM_SRCDEST=$cache/srcdest" >> "$GITHUB_ENV"
+          {
+            echo "HELIUM_SRCDEST=$cache/srcdest"
+            echo "HELIUM_WORK_ROOT=/tmp/helium-work"
+            echo "XDG_RUNTIME_DIR=$runtime"
+          } >> "$GITHUB_ENV"
 
       - name: Environment
         run: |
