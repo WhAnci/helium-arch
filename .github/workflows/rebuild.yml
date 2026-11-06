@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: [self-hosted, linux, arch]
+    runs-on: [self-hosted, arch]
     timeout-minutes: 60
 
     steps:
