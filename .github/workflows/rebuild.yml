@@ -105,12 +105,13 @@ jobs:
           set -euo pipefail
           version='${{ steps.artifact.outputs.version }}'
           tag="v$version"
-          if gh release view "$tag" >/dev/null 2>&1; then
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $tag already exists; nothing to do."
             exit 0
           fi
           gh release create "$tag" \
             '${{ steps.artifact.outputs.package }}' \
             '${{ steps.artifact.outputs.sha256 }}' \
+            --repo "$GITHUB_REPOSITORY" \
             --title "helium-bin $version" \
             --notes "Automated Arch Linux package build of helium-bin $version."
